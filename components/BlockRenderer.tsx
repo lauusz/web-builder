@@ -116,7 +116,7 @@ const DraggableChildWrapper = ({
       ref={containerRef}
       className={`pointer-events-auto ${isAbs || isDragging ? 'absolute' : 'relative'} ${isDragging ? 'cursor-grabbing z-[100] shadow-2xl opacity-90' : isPreview ? '' : 'cursor-grab hover:ring-2 hover:ring-indigo-400/50 rounded-xl transition-shadow'}`}
       style={{
-        width: child.type === 'navbar' ? '100%' : 'auto',
+        width: child.styles.width || (child.type === 'navbar' ? '100%' : 'auto'),
         zIndex: child.type === 'navbar' ? 50 : (isDragging ? 100 : 1),
         ...(isAbs || isDragging ? {
           left: `${currentX}%`,

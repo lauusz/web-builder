@@ -848,6 +848,24 @@ export function PropertyEditor() {
 
         {/* Styling Accordion */}
         <Accordion title="Design & Layout" defaultOpen={true}>
+          {/* Box Width for Texts */}
+          {isTextType && (
+            <div className="space-y-2 mb-4 pb-4 border-b border-gray-100">
+              <label className="flex justify-between text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                <span>Box Width</span>
+                <span className="text-blue-600">{selectedBlock.styles.width || '100%'}</span>
+              </label>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={parseInt((selectedBlock.styles.width as string) || '100')}
+                onChange={(e) => updateBlock(selectedBlock.id, { styles: { ...selectedBlock.styles, width: `${e.target.value}%` } })}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+              />
+            </div>
+          )}
+
           {/* Segmented Alignment */}
           {isAlignable && (
             <div className="space-y-2">
