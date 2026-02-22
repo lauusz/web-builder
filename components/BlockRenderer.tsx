@@ -1,7 +1,142 @@
 import React, { useState } from 'react';
 import { Block } from '@/types/builder';
+import { useBuilder } from '@/context/BuilderContext';
+
+const DraggableChildWrapper = ({ 
+  child, 
+  parentId, 
+  isPreview 
+}: { 
+  child: Block, 
+  parentId: string, 
+  isPreview?: boolean 
+}) => {
+  const { updateBlock } = useBuilder();
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const containerRef = React.useRef<HTMLDivElement>(null);
+
+  const isAbs = child.styles.isAbsolute;
+  
+  // Use local state while dragging for 60fps smoothness without context re-renders
+  const currentX = isAbs ? (child.styles.posX ?? 50) : 50;
+  const currentY = isAbs ? (child.styles.posY ?? 50) : 50;
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (isPreview) return;
+    // Only drag on left click
+    if (e.button !== 0) return;
+    
+    // Prevent dragging if clicking inside an interactive child like a button or input
+    if ((e.target as HTMLElement).closest('button, input, textarea, a')) return;
+
+    e.stopPropagation();
+    e.preventDefault();
+
+    setIsDragging(true);
+
+    // Initial offset records the mouse position relative to the element's top-left
+    const rect = e.currentTarget.getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+
+    // Ensure it's marked as absolute immediately on drag start if it wasn't
+    if (!isAbs) {
+      updateBlock(child.id, { styles: { ...child.styles, isAbsolute: true }});
+    }
+
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDragging || isPreview || !containerRef.current) return;
+    
+    e.stopPropagation();
+    e.preventDefault();
+
+    // The boundary is the Section wrapper
+    const parentRect = containerRef.current.parentElement!.getBoundingClientRect();
+    
+    // Calculate new position relative to parent
+    const newLeftPx = e.clientX - dragOffset.x - parentRect.left;
+    const newTopPx = e.clientY - dragOffset.y - parentRect.top;
+
+    // Convert pixel exact coordinate to percentage based off Section size
+    // Note: Since element is translated -50% -50% by default, the origin is the CENTER of the element,
+    // so we must account for half its width/height to get the visual center %.
+    const elementRect = containerRef.current.getBoundingClientRect();
+    const centerX_Px = newLeftPx + (elementRect.width / 2);
+    const centerY_Px = newTopPx + (elementRect.height / 2);
+
+    let pctX = Math.round((centerX_Px / parentRect.width) * 100);
+    let pctY = Math.round((centerY_Px / parentRect.height) * 100);
+
+    // Clamp values so it doesn't fly off screen
+    pctX = Math.max(0, Math.min(100, pctX));
+    pctY = Math.max(0, Math.min(100, pctY));
+
+    // Fast local update via DOM to prevent React re-renders while dragging
+    containerRef.current.style.left = `${pctX}%`;
+    containerRef.current.style.top = `${pctY}%`;
+    
+    // Store it on the dataset for the PointerUp commit
+    containerRef.current.dataset.x = pctX.toString();
+    containerRef.current.style.transform = `translate(-50%, -50%) ${isDragging ? 'scale(1.02)' : 'scale(1)'}`;
+    containerRef.current.dataset.y = pctY.toString();
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDragging) return;
+    e.stopPropagation();
+    
+    setIsDragging(false);
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+
+    if (containerRef.current) {
+        containerRef.current.style.transform = 'translate(-50%, -50%)';
+        const finalX = parseInt(containerRef.current.dataset.x || currentX.toString());
+        const finalY = parseInt(containerRef.current.dataset.y || currentY.toString());
+        
+        // Commit final coordinates to BuilderContext
+        updateBlock(child.id, { 
+            styles: { 
+                ...child.styles, 
+                isAbsolute: true, 
+                posX: finalX, 
+                posY: finalY 
+            }
+        });
+    }
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      className={`pointer-events-auto ${isAbs || isDragging ? 'absolute' : 'relative'} ${isDragging ? 'cursor-grabbing z-[100] shadow-2xl opacity-90' : isPreview ? '' : 'cursor-grab hover:ring-2 hover:ring-indigo-400/50 rounded-xl transition-shadow'}`}
+      style={{
+        width: child.type === 'navbar' ? '100%' : 'auto',
+        zIndex: child.type === 'navbar' ? 50 : (isDragging ? 100 : 1),
+        ...(isAbs || isDragging ? {
+          left: `${currentX}%`,
+          top: `${currentY}%`,
+          transform: `translate(-50%, -50%)`,
+          touchAction: 'none' // Required for pointer events to fire correctly on touch devices
+        } : {})
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+    >
+      <BlockRenderer block={child} isPreview={isPreview} />
+    </div>
+  );
+};
 
 const MenuTabsRenderer = React.memo(function MenuTabsRenderer({ block }: { block: Block }) {
+// ... existing MenuTabsRenderer
   const tabsData = block.menuTabs || [
     { 
       tab: 'Coffee', 
@@ -46,9 +181,10 @@ const MenuTabsRenderer = React.memo(function MenuTabsRenderer({ block }: { block
 
 interface BlockRendererProps {
   block: Block;
+  isPreview?: boolean;
 }
 
-export const BlockRenderer = React.memo(function BlockRenderer({ block }: BlockRendererProps) {
+export const BlockRenderer = React.memo(function BlockRenderer({ block, isPreview }: BlockRendererProps) {
   const { type, content, styles } = block;
 
   const getStyleObject = () => {
@@ -270,26 +406,14 @@ export const BlockRenderer = React.memo(function BlockRenderer({ block }: BlockR
                   padding: styles.padding || '2rem',
                }}
             >
-              {block.children && block.children.map(child => {
-                const isAbs = child.styles.isAbsolute;
-                return (
-                  <div 
-                    key={child.id} 
-                    className={`pointer-events-auto ${isAbs ? 'absolute' : 'relative'}`}
-                    style={{
-                      width: child.type === 'navbar' ? '100%' : 'auto',
-                      zIndex: child.type === 'navbar' ? 50 : 1,
-                      ...(isAbs ? {
-                        left: `${child.styles.posX ?? 50}%`,
-                        top: `${child.styles.posY ?? 50}%`,
-                        transform: 'translate(-50%, -50%)'
-                      } : {})
-                    }}
-                  >
-                    <BlockRenderer block={child} />
-                  </div>
-                );
-              })}
+              {block.children && block.children.map(child => (
+                <DraggableChildWrapper 
+                  key={child.id} 
+                  child={child} 
+                  parentId={block.id} 
+                  isPreview={isPreview} 
+                />
+              ))}
             </div>
           </div>
         );

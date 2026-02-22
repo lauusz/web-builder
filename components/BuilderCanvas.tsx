@@ -102,7 +102,7 @@ export function BuilderCanvas({ isPreview, previewDevice }: BuilderCanvasProps) 
                   {/* Render Content - FIXED: removed overflow-hidden here */}
                   <div className="flex-1 w-full h-full flex flex-col relative">
                     <ErrorBoundary>
-                      <BlockRenderer block={block} />
+                      <BlockRenderer block={block} isPreview={isPreview} />
                     </ErrorBoundary>
                   </div>
                 </div>
