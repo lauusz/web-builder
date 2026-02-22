@@ -1,5 +1,48 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Block } from '@/types/builder';
+
+function MenuTabsRenderer({ block }: { block: Block }) {
+  const tabsData = block.menuTabs || [
+    { 
+      tab: 'Coffee', 
+      items: [
+        { name: 'Espresso', desc: 'Strong and bold', price: '$3.00' },
+        { name: 'Latte', desc: 'Creamy and smooth', price: '$4.50' }
+      ]
+    }
+  ];
+  const [activeTab, setActiveTab] = useState(tabsData[0]?.tab || 'Tab 1');
+  const currentItems = tabsData.find(t => t.tab === activeTab)?.items || [];
+
+  const textColor = block.styles.color || '#000000';
+  
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-start py-8 px-4" style={{ backgroundColor: block.styles.backgroundColor || 'transparent' }}>
+      <div className="flex space-x-2 md:space-x-4 mb-8 overflow-x-auto pb-2 max-w-full">
+        {tabsData.map(t => (
+          <button 
+            key={t.tab}
+            onClick={() => setActiveTab(t.tab)}
+            className={`px-6 py-2.5 rounded-full font-bold transition-all whitespace-nowrap ${activeTab === t.tab ? 'bg-black text-white shadow-md cursor-default' : 'bg-white text-gray-600 hover:bg-gray-100 hover:text-black border border-gray-200 cursor-pointer pointer-events-auto'}`}
+          >
+            {t.tab}
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 w-full max-w-4xl">
+        {currentItems.map((item, i) => (
+          <div key={i} className="flex justify-between items-start border-b border-dashed border-gray-200 pb-4 animate-in fade-in duration-500">
+            <div className="pr-4">
+              <h4 className="font-bold text-lg leading-tight mb-1" style={{ color: textColor }}>{item.name}</h4>
+              <p className="text-sm text-gray-500">{item.desc}</p>
+            </div>
+            <span className="font-bold text-lg whitespace-nowrap" style={{ color: textColor }}>{item.price}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 interface BlockRendererProps {
   block: Block;
@@ -51,13 +94,18 @@ export function BlockRenderer({ block }: BlockRendererProps) {
     case 'image':
       const alignment = styles.textAlign === 'center' ? 'justify-center' : styles.textAlign === 'right' ? 'justify-end' : 'justify-start';
       return (
-        <div className={`flex pointer-events-auto h-full w-full ${alignment}`}>
+        <div className={`flex pointer-events-auto w-full ${alignment}`} style={{ height: styles.height || '100%' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={content || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop'} 
             alt="Block Content" 
-            className="w-full h-full shadow-md border border-gray-100 object-cover"
-            style={{ borderRadius: styles.borderRadius || '0.75rem' }}
+            className="shadow-md border border-gray-100"
+            style={{ 
+              borderRadius: styles.borderRadius || '0.75rem',
+              width: styles.width || '100%',
+              height: styles.height || '100%',
+              objectFit: styles.objectFit || 'cover'
+            }}
             draggable={false}
             onError={(e) => {
               (e.target as HTMLImageElement).src = 'https://via.placeholder.com/800x400?text=Invalid+Image+URL';
@@ -90,9 +138,11 @@ export function BlockRenderer({ block }: BlockRendererProps) {
         const linkGap = styles.linkSpacing || '2rem';
         const navFontSize = styles.fontSize || '0.875rem';
         const cta = block.navbarCta;
+        const isSticky = styles.isSticky;
+        const hasTransparency = navBg === 'transparent' || navBg.startsWith('rgba') || styles.overlayOpacity;
         return (
           <nav 
-            className="w-full h-full flex items-center justify-between box-border relative overflow-hidden"
+            className={`w-full h-full flex items-center justify-between box-border relative overflow-hidden ${isSticky ? 'sticky top-0 z-[100] shadow-md' : ''} ${isSticky && hasTransparency ? 'backdrop-blur-md' : ''}`}
             style={{ 
               backgroundColor: navBg,
               padding: styles.padding || '0.75rem 1.5rem',
@@ -181,6 +231,86 @@ export function BlockRenderer({ block }: BlockRendererProps) {
             </a>
           </div>
         );
+      case 'section':
+        const opacity = styles.overlayOpacity !== undefined 
+            ? (styles.overlayOpacity <= 1 && styles.overlayOpacity > 0 ? styles.overlayOpacity : styles.overlayOpacity / 100) 
+            : 0;
+        const overlayColor = styles.overlayColor || '#000000';
+        const isFullWidth = styles.isFullWidth ?? true; // Default sections to full width for landing pages
+        const minHeight = styles.minHeight || 'auto';
+        const bgImgUrl = styles.backgroundImage || styles.bgImage;
+        const bgSize = styles.backgroundSize || 'cover';
+        return (
+          <div 
+            className={`h-full relative flex flex-col ${isFullWidth ? 'w-[100vw] relative left-[calc(-50vw+50%)] max-w-none' : 'w-full'}`}
+            style={{ 
+              backgroundColor: styles.backgroundColor || 'transparent',
+              backgroundImage: bgImgUrl ? `url(${bgImgUrl})` : 'none',
+              backgroundSize: bgSize,
+              backgroundPosition: 'center',
+              backgroundRepeat: bgSize === 'contain' ? 'no-repeat' : 'repeat',
+              borderRadius: styles.borderRadius || '0',
+              minHeight,
+            }}
+          >
+            {bgImgUrl && opacity > 0 && (
+              <div 
+                className="absolute inset-0 z-0 pointer-events-none" 
+                style={{ backgroundColor: overlayColor, opacity: opacity, borderRadius: styles.borderRadius || '0' }} 
+              />
+            )}
+            {/* The Smart Container Area (Auto-Layout) */}
+            <div 
+               className={`relative z-10 w-full flex-1 flex flex-wrap box-border mx-auto ${isFullWidth ? 'max-w-none px-4' : 'max-w-7xl'}`}
+               style={{
+                  flexDirection: styles.flexDirection || 'column',
+                  alignItems: styles.alignItems || 'center',
+                  justifyContent: styles.justifyContent || 'flex-start',
+                  gap: styles.gap || '1rem',
+                  padding: styles.padding || '2rem',
+               }}
+            >
+              {block.children && block.children.map(child => {
+                const isAbs = child.styles.isAbsolute;
+                return (
+                  <div 
+                    key={child.id} 
+                    className={`pointer-events-auto ${isAbs ? 'absolute' : 'relative'}`}
+                    style={{
+                      width: child.type === 'navbar' ? '100%' : 'auto',
+                      zIndex: child.type === 'navbar' ? 50 : 1,
+                      ...(isAbs ? {
+                        left: `${child.styles.posX ?? 50}%`,
+                        top: `${child.styles.posY ?? 50}%`,
+                        transform: 'translate(-50%, -50%)'
+                      } : {})
+                    }}
+                  >
+                    <BlockRenderer block={child} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      case 'footer':
+        return (
+          <footer className="w-full py-12 px-6 flex flex-col items-center justify-center border-t border-gray-200" style={{ backgroundColor: styles.backgroundColor || '#111827', color: styles.color || '#ffffff' }}>
+            <div className="max-w-7xl mx-auto flex flex-col items-center md:flex-row md:justify-between w-full gap-8">
+              <div className="text-center md:text-left">
+                <h3 className="text-xl font-bold mb-2">{content || 'Your Brand'}</h3>
+                <p className="text-sm opacity-70">© {new Date().getFullYear()} All rights reserved.</p>
+              </div>
+              <div className="flex gap-4">
+                 {block.links?.map(link => (
+                    <a key={link.id} href={link.url} className="text-sm hover:underline opacity-80 hover:opacity-100">{link.label}</a>
+                 ))}
+              </div>
+            </div>
+          </footer>
+        );
+      case 'menu-tabs':
+        return <MenuTabsRenderer block={block} />;
       default:
         return null;
     }

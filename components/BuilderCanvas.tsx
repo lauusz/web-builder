@@ -32,7 +32,7 @@ export function BuilderCanvas({ isPreview, previewDevice }: BuilderCanvasProps) 
       <div className={`transition-all relative ${
         previewDevice === 'mobile' 
           ? 'mx-auto bg-white w-full max-w-[375px] min-h-[812px] shadow-2xl overflow-x-hidden ring-1 ring-gray-300 mt-8 mb-32'
-          : 'max-w-full px-6 md:px-12 pt-8 pb-32 min-h-screen'
+          : 'max-w-full min-h-screen pb-32'
       }`}>
         {blocks.length === 0 ? (
           <div className="h-[80vh] flex flex-col items-center justify-center">
@@ -56,6 +56,8 @@ export function BuilderCanvas({ isPreview, previewDevice }: BuilderCanvasProps) 
             breakpoints={{ lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0 }}
             cols={{ lg: 12, md: 10, sm: 6, xs: 4, xxs: 2 }}
             rowHeight={30}
+            margin={[0, 0]}
+            containerPadding={[0, 0]}
             compactType="vertical"
             preventCollision={false}
             onLayoutChange={(layout: any[]) => updateBlockLayout(layout)}

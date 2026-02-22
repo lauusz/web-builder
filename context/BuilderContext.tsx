@@ -12,7 +12,7 @@ function generateId() {
 interface BuilderContextType {
   blocks: Block[];
   selectedBlockId: string | null;
-  addBlock: (type: BlockType) => void;
+  addBlock: (type: BlockType, parentId?: string) => void;
   updateBlock: (id: string, updates: Partial<Block>) => void;
   updateBlockLayout: (newLayoutData: any[]) => void;
   moveBlock: (id: string, direction: 'up' | 'down') => void;
@@ -47,11 +47,13 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [blocks, isInitialized]);
 
-  const addBlock = (type: BlockType) => {
+  const addBlock = (type: BlockType, parentId?: string) => {
     let defaultContent = '';
     let defaultLinks: typeof newBlock.links = undefined;
     let defaultNavbarCta: typeof newBlock.navbarCta = undefined;
     let defaultWaData: typeof newBlock.waData = undefined;
+    let defaultChildren: Block[] | undefined = undefined;
+    let defaultMenuTabs: typeof newBlock.menuTabs = undefined;
     
     if (type === 'heading') defaultContent = 'New Heading';
     else if (type === 'paragraph') defaultContent = 'New Paragraph';
@@ -63,13 +65,48 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
         { id: generateId(), label: 'Home', url: '#' },
         { id: generateId(), label: 'Features', url: '#features' },
         { id: generateId(), label: 'Pricing', url: '#pricing' },
-        { id: generateId(), label: 'About', url: '#about' },
-        { id: generateId(), label: 'Contact', url: '#contact' },
+        { id: generateId(), label: 'About', url: '#contact' },
       ];
       defaultNavbarCta = { label: 'Get Started', url: '#' };
     } else if (type === 'wa-button') {
       defaultContent = 'Chat via WhatsApp';
       defaultWaData = { phone: '6281234567890', message: 'Halo, saya tertarik dengan produk Anda.' };
+    } else if (type === 'section') {
+      defaultContent = 'Section';
+      // Hero preset defaults
+      defaultChildren = [
+        {
+          id: generateId(),
+          type: 'heading',
+          content: 'Catchy Hero Title',
+          layout: { x: 0, y: 0, w: 12, h: 4 },
+          styles: { textAlign: 'center', fontSize: '3rem', fontWeight: '800', posX: 50, posY: 20 }
+        },
+        {
+          id: generateId(),
+          type: 'paragraph',
+          content: 'An engaging subtitle that explains your value proposition clearly.',
+          layout: { x: 0, y: 4, w: 12, h: 3 },
+          styles: { textAlign: 'center', fontSize: '1.25rem', posX: 50, posY: 50 }
+        },
+        {
+          id: generateId(),
+          type: 'button',
+          content: 'Get Started Now',
+          layout: { x: 4, y: 7, w: 4, h: 3 },
+          styles: { textAlign: 'center', backgroundColor: '#000000', color: '#ffffff', posX: 50, posY: 80 }
+        }
+      ];
+    } else if (type === 'menu-tabs') {
+      defaultContent = 'Menu';
+      defaultMenuTabs = [
+        { 
+          tab: 'Category 1', 
+          items: [{ name: 'Item 1', desc: 'Description', price: '$10' }]
+        }
+      ];
+    } else if (type === 'footer') {
+      defaultContent = 'Footer';
     }
 
     const newBlock: Block = {
@@ -79,35 +116,69 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       links: defaultLinks,
       navbarCta: defaultNavbarCta,
       waData: defaultWaData,
-      layout: { x: 0, y: Infinity, w: 12, h: type === 'navbar' ? 3 : type === 'image' ? 6 : 4 },
+      children: defaultChildren,
+      menuTabs: defaultMenuTabs,
+      childrenIds: type === 'section' ? [] : undefined,
+      layout: { 
+        x: 0, 
+        y: Infinity, 
+        w: 12, 
+        h: type === 'section' ? 15 : type === 'menu-tabs' ? 10 : type === 'navbar' ? 3 : type === 'image' ? 6 : type === 'footer' ? 6 : 4 
+      },
       styles: {
         textAlign: 'left',
-        color: type === 'navbar' ? '#ffffff' : type === 'wa-button' ? '#ffffff' : '#000000',
-        backgroundColor: type === 'navbar' ? '#111827' : type === 'wa-button' ? '#25D366' : 'transparent',
+        color: type === 'navbar' || type === 'wa-button' ? '#ffffff' : '#000000',
+        backgroundColor: type === 'navbar' ? '#111827' : type === 'wa-button' ? '#25D366' : type === 'section' ? '#f3f4f6' : 'transparent',
         padding: type === 'navbar' ? '0.75rem 1.5rem' : undefined,
         linkSpacing: type === 'navbar' ? '2rem' : undefined,
         fontSize: type === 'navbar' ? '0.875rem' : undefined,
+        posX: parentId ? 50 : undefined,
+        posY: parentId ? 50 : undefined,
       },
     };
     
-    // Add to bottom
-    setBlocks((prev) => [...prev, newBlock]);
+    if (parentId) {
+      setBlocks(prev => {
+        const updateRecursive = (list: Block[]): Block[] => {
+          return list.map(b => {
+             if (b.id === parentId) {
+               return { ...b, children: [...(b.children || []), newBlock] };
+             }
+             if (b.children) {
+               return { ...b, children: updateRecursive(b.children) };
+             }
+             return b;
+          });
+        };
+        return updateRecursive(prev);
+      });
+    } else {
+      setBlocks((prev) => [...prev, newBlock]);
+    }
     
     // Automatically select newly added block
     setSelectedBlockId(newBlock.id);
   };
 
   const updateBlock = (id: string, updates: Partial<Block>) => {
-    setBlocks((prev) =>
-      prev.map((b) => {
-        if (b.id !== id) return b;
-        return {
-          ...b,
-          ...updates,
-          styles: { ...b.styles, ...(updates.styles || {}) },
-        };
-      })
-    );
+    setBlocks(prev => {
+      const updateRecursive = (list: Block[]): Block[] => {
+        return list.map(b => {
+          if (b.id === id) {
+            return {
+              ...b,
+              ...updates,
+              styles: { ...b.styles, ...(updates.styles || {}) },
+            };
+          }
+          if (b.children) {
+            return { ...b, children: updateRecursive(b.children) };
+          }
+          return b;
+        });
+      };
+      return updateRecursive(prev);
+    });
   };
 
   const updateBlockLayout = (newLayoutData: any[]) => {
@@ -150,7 +221,17 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeBlock = (id: string) => {
-    setBlocks((prev) => prev.filter((b) => b.id !== id));
+    setBlocks(prev => {
+      const removeRecursive = (list: Block[]): Block[] => {
+        return list.filter(b => b.id !== id).map(b => {
+          if (b.children) {
+            return { ...b, children: removeRecursive(b.children) };
+          }
+          return b;
+        });
+      };
+      return removeRecursive(prev);
+    });
     if (selectedBlockId === id) setSelectedBlockId(null);
   };
 

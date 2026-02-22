@@ -10,7 +10,9 @@ import {
   MousePointerClick,
   LayoutTemplate,
   Type,
-  MousePointer2
+  MousePointer2,
+  Square,
+  Menu
 } from 'lucide-react';
 import { useBuilder } from '@/context/BuilderContext';
 import { BlockType } from '@/types/builder';
@@ -27,17 +29,18 @@ interface BlockDefinition {
 
 const CATEGORIES: { title: string; icon: React.FC<any>; blocks: BlockDefinition[] }[] = [
   {
-    title: 'Layout & Navigation',
+    title: 'Layout & Structure',
     icon: LayoutTemplate,
     blocks: [
-      { type: 'navbar', label: 'Navigation Bar', description: 'Top header with links', icon: Navigation, theme: 'indigo' },
+      { type: 'section', label: 'Section', description: 'Full width container', icon: Square, theme: 'indigo' },
+      { type: 'navbar', label: 'Navigation Bar', description: 'Top header with links', icon: Navigation, theme: 'blue' },
     ]
   },
   {
     title: 'Typography',
     icon: Type,
     blocks: [
-      { type: 'heading', label: 'Heading', description: 'Large section title', icon: Heading, theme: 'blue' },
+      { type: 'heading', label: 'Heading', description: 'Large section title', icon: Heading, theme: 'purple' },
       { type: 'paragraph', label: 'Text Block', description: 'Standard paragraph text', icon: Pilcrow, theme: 'primary' },
     ]
   },
@@ -45,9 +48,10 @@ const CATEGORIES: { title: string; icon: React.FC<any>; blocks: BlockDefinition[
     title: 'Interactive & Media',
     icon: MousePointer2,
     blocks: [
-      { type: 'image', label: 'Image', description: 'Responsive picture block', icon: ImageIcon, theme: 'purple' },
+      { type: 'image', label: 'Image', description: 'Responsive picture block', icon: ImageIcon, theme: 'emerald' },
       { type: 'button', label: 'Action Button', description: 'Clickable CTA link', icon: MousePointerClick, theme: 'orange' },
       { type: 'wa-button', label: 'WhatsApp', description: 'Direct chat button', icon: MessageCircle, theme: 'emerald' },
+      { type: 'menu-tabs', label: 'Menu Tabs', description: 'Categorized item list', icon: Menu, theme: 'indigo' },
     ]
   }
 ];
@@ -66,8 +70,10 @@ interface BuilderSidebarProps {
 }
 
 export function BuilderSidebar({ isPreview }: BuilderSidebarProps) {
-  const { blocks, addBlock } = useBuilder();
+  const { blocks, addBlock, selectedBlockId } = useBuilder();
   const hasNavbar = blocks.some((b) => b.type === 'navbar');
+  const activeBlock = blocks.find((b) => b.id === selectedBlockId);
+  const targetParentId = activeBlock?.type === 'section' ? activeBlock.id : undefined;
 
   if (isPreview) return null;
 
@@ -75,7 +81,7 @@ export function BuilderSidebar({ isPreview }: BuilderSidebarProps) {
     <aside className="w-[300px] border-r border-gray-200 bg-white flex flex-col shrink-0 overflow-y-auto z-20 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
       <div className="p-6 pb-2">
         <h2 className="text-xl font-bold tracking-tight text-gray-900">Blocks</h2>
-        <p className="text-sm text-gray-500 mt-1">Drag or click to add elements</p>
+        <p className="text-sm text-gray-500 mt-1">Click to add elements</p>
       </div>
       
       <div className="flex-1 w-full px-4 pb-8 space-y-6 overflow-y-auto">
@@ -94,7 +100,7 @@ export function BuilderSidebar({ isPreview }: BuilderSidebarProps) {
                 return (
                   <button 
                     key={type}
-                    onClick={() => addBlock(type)}
+                    onClick={() => addBlock(type, targetParentId)}
                     disabled={isDisabled}
                     className={`flex items-start gap-3 w-full bg-white border border-gray-100 p-3 rounded-xl transition-all duration-200 text-left group hover:ring-4 ${
                       isDisabled
