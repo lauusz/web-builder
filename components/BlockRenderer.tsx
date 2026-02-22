@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Block } from '@/types/builder';
 
-function MenuTabsRenderer({ block }: { block: Block }) {
+const MenuTabsRenderer = React.memo(function MenuTabsRenderer({ block }: { block: Block }) {
   const tabsData = block.menuTabs || [
     { 
       tab: 'Coffee', 
@@ -42,13 +42,13 @@ function MenuTabsRenderer({ block }: { block: Block }) {
       </div>
     </div>
   );
-}
+});
 
 interface BlockRendererProps {
   block: Block;
 }
 
-export function BlockRenderer({ block }: BlockRendererProps) {
+export const BlockRenderer = React.memo(function BlockRenderer({ block }: BlockRendererProps) {
   const { type, content, styles } = block;
 
   const getStyleObject = () => {
@@ -321,4 +321,4 @@ export function BlockRenderer({ block }: BlockRendererProps) {
       {renderContent()}
     </div>
   );
-}
+});

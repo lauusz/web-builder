@@ -60,13 +60,14 @@ const buildHTMLForBlock = (block: Block): string => {
          const navFontSize = fontSize || '0.875rem';
          const isSticky = styles.isSticky;
          
-         let navStyle = `${styleString} width: 100%; display: flex; justify-content: space-between; align-items: center; background-color: ${navBg}; padding: ${styles.padding || '0.75rem 1.5rem'}; z-index: 100; `;
-         if (isSticky) {
-            navStyle += 'position: sticky; top: 0; ';
+         let navClasses = `w-full flex justify-between items-center ${isSticky ? 'sticky top-0 z-50 shadow-md' : 'relative z-50'}`;
+         let navStyle = `${styleString} background-color: ${navBg}; padding: ${styles.padding || '0.75rem 1.5rem'};`;
+         if (isSticky && (navBg === 'transparent' || navBg.startsWith('rgba') || styles.overlayOpacity)) {
+            navClasses += ' backdrop-blur-md';
          }
          
          const linksHtml = (block.links || []).map(link => 
-            `<a href="${link.url}" style="color: ${navColor}; opacity: 0.8; text-decoration: none; font-size: ${navFontSize}; font-weight: 500; transition: opacity 0.2s;">${link.label}</a>`
+            `<a href="${link.url}" class="opacity-80 hover:opacity-100 transition-opacity" style="color: ${navColor}; text-decoration: none; font-size: ${navFontSize}; font-weight: 500;">${link.label}</a>`
          ).join('');
          
          const ctaHtml = block.navbarCta 
@@ -74,12 +75,12 @@ const buildHTMLForBlock = (block: Block): string => {
             : '';
             
          return `
-            <nav style="${navStyle}">
-               <div style="font-weight: 700; font-size: calc(${navFontSize} * 1.3); color: ${navColor}; tracking-tight: -0.025em;">${content}</div>
-               <div style="display: flex; gap: ${linkGap}; align-items: center;">
+            <nav class="${navClasses}" style="${navStyle}">
+               <div style="font-weight: 700; font-size: calc(${navFontSize} * 1.3); color: ${navColor}; letter-spacing: -0.025em; cursor: default; user-select: none;">${content}</div>
+               <div class="hidden md:flex items-center" style="gap: ${linkGap};">
                   ${linksHtml}
                </div>
-               <div>${ctaHtml}</div>
+               <div class="shrink-0">${ctaHtml}</div>
             </nav>
          `;
 
@@ -94,9 +95,54 @@ const buildHTMLForBlock = (block: Block): string => {
                </a>
             </div>
          `;
+         
+      case 'menu-tabs':
+         const tabsData = block.menuTabs || [];
+         if (tabsData.length === 0) return '';
+         
+         const uniquePrefix = `tab-group-${block.id}`;
+         const tabsColor = color !== 'inherit' ? color : '#000000';
+         const tabsBg = bg !== 'transparent' ? bg : 'transparent';
+         
+         const buttonHtml = tabsData.map((t, index) => `
+            <button 
+               onclick="switchTab('${uniquePrefix}', ${index})"
+               id="${uniquePrefix}-btn-${index}"
+               class="px-6 py-2.5 rounded-full font-bold transition-all whitespace-nowrap ${index === 0 ? 'bg-black text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 cursor-pointer'}"
+            >
+               ${t.tab}
+            </button>
+         `).join('');
+         
+         const contentHtml = tabsData.map((t, index) => {
+            const itemsHtml = t.items.map(item => `
+               <div class="flex justify-between items-start border-b border-dashed border-gray-200 pb-4">
+                  <div class="pr-4">
+                     <h4 class="font-bold text-lg leading-tight mb-1" style="color: ${tabsColor}">${item.name}</h4>
+                     <p class="text-sm text-gray-500">${item.desc}</p>
+                  </div>
+                  <span class="font-bold text-lg whitespace-nowrap" style="color: ${tabsColor}">${item.price}</span>
+               </div>
+            `).join('');
+            
+            return `
+               <div id="${uniquePrefix}-content-${index}" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8 w-full max-w-4xl transition-opacity duration-300" style="display: ${index === 0 ? 'grid' : 'none'};">
+                  ${itemsHtml}
+               </div>
+            `;
+         }).join('');
+         
+         return `
+            <div class="w-full h-full flex flex-col items-center justify-start py-8 px-4" style="background-color: ${tabsBg}; ${styleString}">
+               <div class="flex space-x-2 md:space-x-4 mb-8 overflow-x-auto pb-2 max-w-full" style="-webkit-overflow-scrolling: touch;">
+                  ${buttonHtml}
+               </div>
+               ${contentHtml}
+            </div>
+         `;
 
       case 'section':
-         const minHeight = styles.minHeight || 'auto';
+         let minHeight = (styles.minHeight && styles.minHeight !== 'auto') ? styles.minHeight : `${(block.layout?.h || 15) * 30}px`;
          const isFullWidth = styles.isFullWidth ?? true;
          const bgImgUrl = styles.backgroundImage || styles.bgImage;
          const bgSize = styles.backgroundSize || 'cover';
@@ -105,24 +151,27 @@ const buildHTMLForBlock = (block: Block): string => {
             : 0;
          const overlayColor = styles.overlayColor || '#000000';
 
-         let sectionStyle = `position: relative; width: 100%; display: flex; flex-direction: column; background-color: ${bg}; min-height: ${minHeight}; border-radius: ${borderRadius}; `;
+         let sectionClasses = `relative w-full flex flex-col ${minHeight === '100vh' ? 'min-h-screen' : ''}`;
+         let sectionStyle = `background-color: ${bg}; ${minHeight !== '100vh' ? `min-height: ${minHeight};` : ''} border-radius: ${borderRadius}; `;
+         
          if (bgImgUrl) {
             sectionStyle += `background-image: url('${bgImgUrl}'); background-size: ${bgSize}; background-position: center; background-repeat: ${bgSize === 'contain' ? 'no-repeat' : 'repeat'}; `;
          }
 
          // The children wrapper
-         let containerStyle = `position: relative; z-index: 10; width: 100%; flex: 1; max-width: ${isFullWidth ? '100%' : '1280px'}; margin: 0 auto; display: flex; flex-wrap: wrap; flex-direction: ${styles.flexDirection || 'column'}; align-items: ${styles.alignItems || 'center'}; justify-content: ${styles.justifyContent || 'flex-start'}; gap: ${styles.gap || '1rem'}; padding: ${styles.padding || '2rem'}; box-sizing: border-box; `;
+         let containerClasses = `relative z-10 w-full flex-1 mx-auto flex flex-wrap ${isFullWidth ? 'max-w-none px-4' : 'max-w-7xl'}`;
+         let containerStyle = `flex-direction: ${styles.flexDirection || 'column'}; align-items: ${styles.alignItems || 'center'}; justify-content: ${styles.justifyContent || 'flex-start'}; gap: ${styles.gap || '1rem'}; padding: ${styles.padding || '2rem'}; box-sizing: border-box; `;
 
          const childrenHtml = (block.children || []).map(child => buildHTMLForBlock(child)).join('\n');
 
          const overlayHtml = (bgImgUrl && opacity > 0) 
-            ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background-color: ${overlayColor}; opacity: ${opacity}; border-radius: ${borderRadius}; pointer-events: none;"></div>`
+            ? `<div class="absolute inset-0 z-0 pointer-events-none" style="background-color: ${overlayColor}; opacity: ${opacity}; border-radius: ${borderRadius};"></div>`
             : '';
 
          return `
-            <section style="${sectionStyle}">
+            <section class="${sectionClasses}" style="${sectionStyle}">
                ${overlayHtml}
-               <div style="${containerStyle}">
+               <div class="${containerClasses}" style="${containerStyle}">
                   ${childrenHtml}
                </div>
             </section>
@@ -146,6 +195,18 @@ export const exportToHTML = (blocks: Block[]) => {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+            },
+          }
+        }
+      }
+    </script>
     <style>
         /* Base Reset & Typography */
         *, *::before, *::after { box-sizing: border-box; }
@@ -157,6 +218,9 @@ export const exportToHTML = (blocks: Block[]) => {
            background-color: #ffffff; 
            overflow-x: hidden;
            color: #111827;
+           min-height: 100vh;
+           display: flex;
+           flex-direction: column;
         }
         
         /* Smooth scrolling */
@@ -172,6 +236,37 @@ export const exportToHTML = (blocks: Block[]) => {
     <div id="root-container" style="display: flex; flex-direction: column; width: 100vw; min-height: 100vh; overflow-x: hidden;">
 ${innerHtml}
     </div>
+    
+    <!-- Interactive Element Scripts -->
+    <script>
+      function switchTab(prefix, targetIndex) {
+         // Find all buttons starting with the prefix
+         const allButtons = document.querySelectorAll('[id^="' + prefix + '-btn-"]');
+         const allContents = document.querySelectorAll('[id^="' + prefix + '-content-"]');
+         
+         // Reset all buttons to inactive state
+         allButtons.forEach(btn => {
+            btn.className = "px-6 py-2.5 rounded-full font-bold transition-all whitespace-nowrap bg-white text-gray-600 border border-gray-200 cursor-pointer";
+         });
+         
+         // Hide all content areas
+         allContents.forEach(content => {
+            content.style.display = "none";
+         });
+         
+         // Set target button to active state
+         const targetBtn = document.getElementById(prefix + '-btn-' + targetIndex);
+         if (targetBtn) {
+            targetBtn.className = "px-6 py-2.5 rounded-full font-bold transition-all whitespace-nowrap bg-black text-white shadow-md";
+         }
+         
+         // Show target content area
+         const targetContent = document.getElementById(prefix + '-content-' + targetIndex);
+         if (targetContent) {
+            targetContent.style.display = "grid";
+         }
+      }
+    </script>
 </body>
 </html>`;
 

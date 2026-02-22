@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { Block, BlockType } from '@/types/builder';
 
 function generateId() {
@@ -47,7 +47,7 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     }
   }, [blocks, isInitialized]);
 
-  const addBlock = (type: BlockType, parentId?: string) => {
+  const addBlock = useCallback((type: BlockType, parentId?: string) => {
     let defaultContent = '';
     let defaultLinks: typeof newBlock.links = undefined;
     let defaultNavbarCta: typeof newBlock.navbarCta = undefined;
@@ -158,9 +158,9 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
     
     // Automatically select newly added block
     setSelectedBlockId(newBlock.id);
-  };
+  }, []);
 
-  const updateBlock = (id: string, updates: Partial<Block>) => {
+  const updateBlock = useCallback((id: string, updates: Partial<Block>) => {
     setBlocks(prev => {
       const updateRecursive = (list: Block[]): Block[] => {
         return list.map(b => {
@@ -179,9 +179,9 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       };
       return updateRecursive(prev);
     });
-  };
+  }, []);
 
-  const updateBlockLayout = (newLayoutData: any[]) => {
+  const updateBlockLayout = useCallback((newLayoutData: any[]) => {
     setBlocks((prev) =>
       prev.map((block) => {
         const matchingLayout = newLayoutData.find((l) => l.i === block.id);
@@ -199,9 +199,9 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
         return block;
       })
     );
-  };
+  }, []);
 
-  const moveBlock = (id: string, direction: 'up' | 'down') => {
+  const moveBlock = useCallback((id: string, direction: 'up' | 'down') => {
     setBlocks((prev) => {
       const index = prev.findIndex((b) => b.id === id);
       if (index === -1) return prev;
@@ -218,9 +218,9 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       }
       return prev;
     });
-  };
+  }, []);
 
-  const removeBlock = (id: string) => {
+  const removeBlock = useCallback((id: string) => {
     setBlocks(prev => {
       const removeRecursive = (list: Block[]): Block[] => {
         return list.filter(b => b.id !== id).map(b => {
@@ -233,21 +233,21 @@ export function BuilderProvider({ children }: { children: React.ReactNode }) {
       return removeRecursive(prev);
     });
     if (selectedBlockId === id) setSelectedBlockId(null);
-  };
+  }, [selectedBlockId]);
+
+  const contextValue = useMemo(() => ({
+    blocks,
+    selectedBlockId,
+    addBlock,
+    updateBlock,
+    updateBlockLayout,
+    moveBlock,
+    removeBlock,
+    setSelectedBlock: setSelectedBlockId
+  }), [blocks, selectedBlockId, addBlock, updateBlock, updateBlockLayout, moveBlock, removeBlock]);
 
   return (
-    <BuilderContext.Provider 
-      value={{ 
-        blocks, 
-        selectedBlockId, 
-        addBlock, 
-        updateBlock, 
-        updateBlockLayout,
-        moveBlock, 
-        removeBlock, 
-        setSelectedBlock: setSelectedBlockId 
-      }}
-    >
+    <BuilderContext.Provider value={contextValue}>
       {children}
     </BuilderContext.Provider>
   );

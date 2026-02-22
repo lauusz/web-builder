@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { Heading, Trash2 } from 'lucide-react';
 import { useBuilder } from '@/context/BuilderContext';
 import { BlockRenderer } from '@/components/BlockRenderer';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 
@@ -99,7 +100,9 @@ export function BuilderCanvas({ isPreview, previewDevice }: BuilderCanvasProps) 
 
                   {/* Render Content - FIXED: removed overflow-hidden here */}
                   <div className="flex-1 w-full h-full flex flex-col relative">
-                    <BlockRenderer block={block} />
+                    <ErrorBoundary>
+                      <BlockRenderer block={block} />
+                    </ErrorBoundary>
                   </div>
                 </div>
               );
