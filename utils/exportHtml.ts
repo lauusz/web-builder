@@ -17,8 +17,15 @@ const buildHTMLForBlock = (block: Block): string => {
    
    if (fontSize) styleString += `font-size: ${fontSize}; `;
    if (styles.fontWeight) styleString += `font-weight: ${styles.fontWeight}; `;
+   // If it's a grid item (not section), we should force its width and height to match
+   // its grid dimensions to perfectly mirror the visual canvas resize.
+   // Grid units w is percentage-based relative to the row, so we use width: 100% since its container sets the width in Grid.
+   // However, for pure HTML export without a CSS grid system, absolute sized heights are safest for exact mirroring.
+   // Let's use the layout height rows multiplied by rowHeight (30px) as the definitive height if available.
+   const mappedHeight = block.layout?.h ? `${block.layout.h * 30}px` : height;
+
    if (type !== 'section') {
-      styleString += `width: ${width}; height: ${height}; `;
+      styleString += `width: ${width}; height: ${mappedHeight}; `;
    }
 
    if (isAbsolute) {
@@ -142,7 +149,8 @@ const buildHTMLForBlock = (block: Block): string => {
          `;
 
       case 'section':
-         let minHeight = (styles.minHeight && styles.minHeight !== 'auto') ? styles.minHeight : `${(block.layout?.h || 15) * 30}px`;
+         // Force the minHeight to mirror the canvas exact pixel height based on grid rows (rowHeight = 30)
+         let minHeight = `${(block.layout?.h || 15) * 30}px`;
          const isFullWidth = styles.isFullWidth ?? true;
          const bgImgUrl = styles.backgroundImage || styles.bgImage;
          const bgSize = styles.backgroundSize || 'cover';
@@ -183,7 +191,13 @@ const buildHTMLForBlock = (block: Block): string => {
 };
 
 export const exportToHTML = (blocks: Block[]) => {
-  const innerHtml = blocks.map(block => buildHTMLForBlock(block)).join('\n');
+  const innerHtml = blocks.map(block => {
+    const contentHtml = buildHTMLForBlock(block);
+    const gridColumn = block.layout ? `${block.layout.x + 1} / span ${block.layout.w}` : '1 / span 12';
+    // Add +1 to height to ensure the grid cell can encompass the boundary perfectly, though mathematically it's exact rows
+    const gridRow = block.layout ? `${block.layout.y + 1} / span ${block.layout.h}` : 'auto';
+    return `<div class="grid-item" style="grid-column: ${gridColumn}; grid-row: ${gridRow}; z-index: ${block.type === 'navbar' ? 50 : 1}; position: relative; width: 100%; height: 100%;">${contentHtml}</div>`;
+  }).join('\n');
 
   const htmlContent = `<!DOCTYPE html>
 <html lang="en">
@@ -230,10 +244,41 @@ export const exportToHTML = (blocks: Block[]) => {
         a:hover { opacity: 0.9 !important; }
         button:hover { filter: brightness(0.9); transform: translateY(-1px); }
         button:active { transform: translateY(0); }
+
+        /* Emulate React-Grid-Layout for precise canvas mirroring */
+        #root-container {
+           display: grid;
+           grid-template-columns: repeat(12, 1fr);
+           grid-auto-rows: 30px;
+           width: 100vw;
+           min-height: 100vh;
+           overflow-x: hidden;
+        }
+
+        /* Ensure grid items fill the span completely */
+        .grid-item {
+           width: 100%;
+           height: 100%;
+        }
+        
+        /* Fallback for mobile devices to prevent squished columns */
+        @media (max-width: 768px) {
+           #root-container {
+               display: flex;
+               flex-direction: column;
+               gap: 1rem;
+           }
+           .grid-item {
+               grid-column: auto !important;
+               grid-row: auto !important;
+               height: auto !important;
+               min-height: max-content;
+           }
+        }
     </style>
 </head>
 <body>
-    <div id="root-container" style="display: flex; flex-direction: column; width: 100vw; min-height: 100vh; overflow-x: hidden;">
+    <div id="root-container">
 ${innerHtml}
     </div>
     

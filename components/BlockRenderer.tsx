@@ -237,7 +237,7 @@ export const BlockRenderer = React.memo(function BlockRenderer({ block }: BlockR
             : 0;
         const overlayColor = styles.overlayColor || '#000000';
         const isFullWidth = styles.isFullWidth ?? true; // Default sections to full width for landing pages
-        const minHeight = styles.minHeight || 'auto';
+        const minHeight = `${(block.layout?.h || 15) * 30}px`;
         const bgImgUrl = styles.backgroundImage || styles.bgImage;
         const bgSize = styles.backgroundSize || 'cover';
         return (

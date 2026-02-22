@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* React Grid Layout Resize Handle Overrides */
+.react-resizable-handle {
+  z-index: 100 !important;
+  pointer-events: auto !important;
+}
+
+/* Base styles for the bottom middle drag handle */
+.react-resizable-handle-s {
+  width: 100%;
+  height: 10px;
+  bottom: 0;
+  left: 0;
+  cursor: ns-resize;
+  position: absolute;
+  /* Add visual indicator on hover to make it discoverable */
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.react-resizable-handle-s:hover,
+.react-resizable-handle-s:active {
+  background: rgba(59, 130, 246, 0.5); /* blue-500 with opacity */
+}
+
+/* Base styles for the right middle drag handle */
+.react-resizable-handle-e {
+  height: 100%;
+  width: 10px;
+  top: 0;
+  right: 0;
+  cursor: ew-resize;
+  position: absolute;
+  background: transparent;
+  transition: background-color 0.2s ease;
+}
+
+.react-resizable-handle-e:hover,
+.react-resizable-handle-e:active {
+  background: rgba(59, 130, 246, 0.5);
+}

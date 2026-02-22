@@ -61,6 +61,7 @@ export function BuilderCanvas({ isPreview, previewDevice }: BuilderCanvasProps) 
             containerPadding={[0, 0]}
             compactType="vertical"
             preventCollision={false}
+            resizeHandles={['se', 's', 'e']}
             onLayoutChange={(layout: any[]) => updateBlockLayout(layout)}
             isDraggable={!isPreview}
             isResizable={!isPreview}

@@ -629,39 +629,41 @@ export function PropertyEditor() {
                 </div>
               ) : (
                 selectedBlock.links.map((link: any, index: number) => (
-                  <div key={link.id} className="flex flex-col gap-2 p-3 bg-gray-50/50 border border-gray-200 rounded-xl relative group">
-                    <input
-                      type="text"
-                      value={link.label}
-                      onChange={(e) => {
-                        const newLinks = [...(selectedBlock.links || [])];
-                        newLinks[index] = { ...newLinks[index], label: e.target.value };
-                        updateBlock(selectedBlock.id, { links: newLinks });
-                      }}
-                      className="w-full text-sm border border-gray-200 rounded-lg p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                      placeholder="Label (e.g. Home)"
-                    />
-                    <input
-                      type="text"
-                      value={link.url}
-                      onChange={(e) => {
-                        const newLinks = [...(selectedBlock.links || [])];
-                        newLinks[index] = { ...newLinks[index], url: e.target.value };
-                        updateBlock(selectedBlock.id, { links: newLinks });
-                      }}
-                      className="w-full text-xs text-gray-500 font-mono border border-gray-200 rounded-lg p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
-                      placeholder="Target URL (e.g. /home)"
-                    />
+                  <div key={link.id} className="flex gap-2 items-center p-3 bg-gray-50/50 border border-gray-200 rounded-xl group transition-all">
+                    <div className="flex-1 flex flex-col gap-2">
+                       <input
+                         type="text"
+                         value={link.label}
+                         onChange={(e) => {
+                           const newLinks = [...(selectedBlock.links || [])];
+                           newLinks[index] = { ...newLinks[index], label: e.target.value };
+                           updateBlock(selectedBlock.id, { links: newLinks });
+                         }}
+                         className="w-full text-sm border border-gray-200 rounded-lg p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                         placeholder="Label (e.g. Home)"
+                       />
+                       <input
+                         type="text"
+                         value={link.url}
+                         onChange={(e) => {
+                           const newLinks = [...(selectedBlock.links || [])];
+                           newLinks[index] = { ...newLinks[index], url: e.target.value };
+                           updateBlock(selectedBlock.id, { links: newLinks });
+                         }}
+                         className="w-full text-xs text-gray-500 font-mono border border-gray-200 rounded-lg p-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all shadow-sm"
+                         placeholder="Target URL (e.g. /home)"
+                       />
+                    </div>
                     <button
                       onClick={() => {
                         const newLinks = [...(selectedBlock.links || [])];
                         newLinks.splice(index, 1);
                         updateBlock(selectedBlock.id, { links: newLinks });
                       }}
-                      className="absolute -top-2.5 -right-2.5 bg-white border border-gray-200 text-gray-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                      className="p-2 shrink-0 h-full flex flex-col justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
                       title="Remove link"
                     >
-                      <Trash2 size={16} />
+                      <Trash2 size={18} />
                     </button>
                   </div>
                 ))
